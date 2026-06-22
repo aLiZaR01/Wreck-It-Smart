@@ -1,10 +1,10 @@
 using UnityEngine;
 
-public class PlacedExplosive : MonoBehaviour
+public class PlacedExplosive : MonoBehaviour, IPlaceableTool
 {
     [Header("Параметры взрыва")]
     public float radius = 3f;
-    public float force = 4f;      // только физический импульс, урон считается в Block
+    public float force = 4f;
     public LayerMask blockLayer;
 
     [Header("Эффекты")]

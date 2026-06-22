@@ -9,7 +9,7 @@ public class Block : MonoBehaviour
 
     [Header("Спрайты состояний")]
     public Sprite spriteNormal;
-    public Sprite spriteDamaged;   // показывается при здоровье < 50%
+    public Sprite spriteDamaged;
 
     private float currentHealth;
     private Rigidbody2D rb;
@@ -31,7 +31,7 @@ public class Block : MonoBehaviour
             sr.sprite = spriteNormal;
     }
 
-    // Вызывается только взрывом — НЕ от столкновения с полом
+    // Вызывается взрывчаткой
     public void ApplyExplosionForce(Vector2 origin, float force, float radius)
     {
         if (isBroken) return;
@@ -40,14 +40,26 @@ public class Block : MonoBehaviour
         float distance = Mathf.Max(direction.magnitude, 0.1f);
         float falloff = Mathf.Clamp01(1f - (distance / radius));
 
-        // Урон пропорционален близости к взрыву
         float damage = maxHealth * falloff;
         TakeDamage(damage);
 
-        // Физический импульс — отдельно и небольшой
         float physicsForce = force * falloff;
         rb.AddForce(direction.normalized * physicsForce, ForceMode2D.Impulse);
         rb.AddTorque(Random.Range(-20f, 20f));
+    }
+
+    // Вызывается воздушной пушкой — только урон, без импульса (импульс уже в PlacedAirCannon)
+    public void ApplyDirectDamage(float damage)
+    {
+        if (isBroken) return;
+        TakeDamage(damage);
+    }
+
+    // Вызывается пилой
+    public void CutThrough()
+    {
+        if (isBroken) return;
+        Break();
     }
 
     private void TakeDamage(float damage)
@@ -84,7 +96,6 @@ public class Block : MonoBehaviour
 
     private void SpawnFragments()
     {
-        // Если нет готовых фрагментов — создаём автоматически из блока
         Vector3 size = transform.localScale;
         Color col = sr != null ? sr.color : Color.white;
         Sprite spr = sr != null ? sr.sprite : null;
@@ -95,7 +106,6 @@ public class Block : MonoBehaviour
             GameObject frag = new GameObject("Fragment");
             frag.layer = gameObject.layer;
 
-            // Позиция — случайно внутри родительского блока
             frag.transform.position = transform.position + new Vector3(
                 Random.Range(-size.x * 0.25f, size.x * 0.25f),
                 Random.Range(-size.y * 0.25f, size.y * 0.25f),
@@ -104,13 +114,11 @@ public class Block : MonoBehaviour
             frag.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
             frag.transform.localScale = size * 0.48f;
 
-            // Визуал
             SpriteRenderer fragSr = frag.AddComponent<SpriteRenderer>();
             fragSr.sprite = spr;
             fragSr.color = new Color(col.r * 0.75f, col.g * 0.75f, col.b * 0.75f, 1f);
             fragSr.sortingOrder = 2;
 
-            // Физика
             Rigidbody2D fragRb = frag.AddComponent<Rigidbody2D>();
             fragRb.mass = 0.3f;
             fragRb.linearDamping = 1.5f;
@@ -118,10 +126,8 @@ public class Block : MonoBehaviour
             fragRb.AddForce(Random.insideUnitCircle.normalized * 1.5f, ForceMode2D.Impulse);
             fragRb.AddTorque(Random.Range(-30f, 30f));
 
-            // Коллайдер чтобы не проваливались в пол
             frag.AddComponent<BoxCollider2D>();
 
-            // Исчезают через 6 секунд
             Destroy(frag, 6f);
         }
     }
